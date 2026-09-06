@@ -157,6 +157,15 @@ async function ensureJwtSecret() {
 
 async function startServer() {
    try {
+      const { assertGoogleAuthConfiguration } = require('./src/services/google-auth.service');
+      assertGoogleAuthConfiguration();
+   } catch (err) {
+      console.error('Failed to initialize Google authentication:', err.message);
+      process.exit(1);
+      return;
+   }
+
+   try {
       await ensureJwtSecret();
    } catch (err) {
       console.error("Failed to initialize authentication secrets:", err);
@@ -170,7 +179,9 @@ async function startServer() {
             await ensureMongoUri();
             // Require AFTER MONGO_URI is set.
             const { connectToMongoDB } = require('./src/config/database');
-            await connectToMongoDB();
+            const { ensureGoogleIdentityIndex } = require('./src/services/google-auth.service');
+            const db = await connectToMongoDB();
+            await ensureGoogleIdentityIndex(db);
          },
       });
       app.locals.mongoAvailable = mongoStatus.available;
